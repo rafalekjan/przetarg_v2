@@ -5,77 +5,75 @@ import time
 from openpyxl import Workbook, load_workbook
 
 
-def otworz_strone_selenium(adres_www):
+def otworz_strone_selenium():
     strona = webdriver.Chrome('C:\Python27\Scripts\chromedriver.exe')
-    # strona.implicitly_wait(7)
-    strona.get(adres_www)
+    strona.implicitly_wait(10)
+    strona.get(aktualna_strona_www)
     return strona
 
 
-def otworz_strone_soap(adres_www):
-    strona = requests.get(adres_www)
-    stronaa = BeautifulSoup(strona.content, 'html.parser')
-    return stronaa
+def otworz_strone_soup():
+    strona = requests.get(aktualna_strona_www)
+    dane = BeautifulSoup(strona.content, 'html.parser')
+    return dane
 
 
-def ilosc_obiektow_selenium(strona, css):
-    return len(strona.find_elements_by_css_selector(css))
+def ilosc_obiektow_selenium(strona):
+    return len(strona.find_elements_by_css_selector(aktualna_css_strona))
 
 
-def ilosc_obiektow_soap(strona, css):
-    return len(strona.select(css))
+def ilosc_obiektow_soup(strona):
+    return len(strona.select(aktualna_css_strona))
 
 
-def tytul_selenium(strona, numer_obiektu, css, css_tytul):
-    css_nth = css + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
-    if len(css_tytul) > 0:
-        return strona.find_element_by_css_selector(css_nth + ' > ' + css_tytul).text.lower()
+def tytul_selenium(strona, numer_obiektu):
+    css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
+    if len(aktualna_css_tytul) > 0:
+        return strona.find_element_by_css_selector(css_nth + ' > ' + aktualna_css_tytul).text.lower()
     return strona.find_element_by_css_selector(css_nth).text.lower()
 
 
-def tytul_soap(strona, numer_obiektu, css, css_tytul):
-    css_nth = css + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
-    if len(css_tytul) > 0:
-        return strona.select(css_nth)[numer_obiektu].select(css_tytul)[0].text.lower()
+def tytul_soup(strona, numer_obiektu):
+    css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
+    if len(aktualna_css_tytul) > 0:
+        return strona.select(css_nth)[numer_obiektu].select(aktualna_css_tytul)[0].text.lower()
     return strona.select(css_nth)[numer_obiektu].text.lower()
 
 
-def adres_selenium(podst_adress, strona, numer_obiektu, css, css_adres):
-    css_nth = css + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
-    if len(css_adres) > 0:
-        return podst_adress + strona.find_element_by_css_selector(css_nth + ' > ' + css_adres).get_attribute('href')
+def adres_selenium(strona, numer_obiektu):
+    css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
+    if len(aktualna_css_adres) > 0:
+        return aktualna_podst_adres + strona.find_element_by_css_selector(css_nth + ' > ' + css_adresy).get_attribute('href')
     else:
-        return podst_adress + strona.find_element_by_css_selector(css_nth).get_attribute('href')
+        return aktualna_podst_adres + strona.find_element_by_css_selector(css_nth).get_attribute('href')
 
 
-def adres_soap(podst_adres, strona, numer_obiektu, css, css_adres):
-    css_nth = css + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
-    if len(css_adres) > 0:
-        return podst_adres + strona.select(css_nth)[0].select(css_adres, href=True)[0]['href']
+def adres_soup(strona, numer_obiektu):
+    css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
+    if len(aktualna_css_adres) > 0:
+        return aktualna_podst_adres + strona.select(css_nth)[0].select(aktualna_css_adres, href=True)[0]['href']
     else:
-        return podst_adres
+        return aktualna_podst_adres
 
 
 def odczyt_selenium():
-    dane_strony = otworz_strone_selenium(www_strona)
-    ilosc_obiektow = ilosc_obiektow_selenium(dane_strony, css_strona)
+    dane_strony = otworz_strone_selenium()
+    ilosc_obiektow = ilosc_obiektow_selenium(dane_strony)
     for nr in range(ilosc_obiektow):
-        lista_tytulow.append(tytul_selenium(dane_strony, nr, css_strona, css_tytul))
-        lista_adresow.append(adres_selenium(base_url, dane_strony, nr, css_strona, css_adres))
+        lista_tytulow.append(tytul_selenium(dane_strony, nr))
+        lista_adresow.append(adres_selenium(dane_strony, nr))
 
 
-def odczyt_soap():
-    dane_strony = otworz_strone_soap(www_strona)
-    ilosc_obiektow = ilosc_obiektow_soap(dane_strony, css_strona)
+def odczyt_soup():
+    dane_strony = otworz_strone_soup()
+    ilosc_obiektow = ilosc_obiektow_soup(dane_strony)
     for nr in range(ilosc_obiektow):
-        lista_tytulow.append(tytul_soap(dane_strony, nr, css_strona, css_tytul))
-        lista_adresow.append(adres_soap(base_url, dane_strony, nr, css_strona, css_adres))
+        lista_tytulow.append(tytul_soup(dane_strony, nr))
+        lista_adresow.append(adres_soup(dane_strony, nr))
 
 
 def odczyt_historii():
     historia_tytulow = open("historia.txt", "r")
-    # print(historia_tytulow.readlines())
-    # return historia_tytulow.readlines()
     return historia_tytulow.read()
 
 
@@ -94,19 +92,17 @@ def zapis_raportu_txt(nr):
 def zapis_raportu(nr):
     plik_raportu = load_workbook("Raport_" + aktualna_data + ".xlsx")
     wyniki_raportu = plik_raportu.active
-    wyniki_raportu.cell(row=raport_kolumna, column=1).value = '=HYPERLINK("{}", "{}")'.format(lista_adresow[nr], ">Link<")
-    wyniki_raportu.cell(row=raport_kolumna, column=2).value = lista_tytulow[nr]
+    wyniki_raportu.cell(row=len(wyniki_raportu["A"]) + 1, column=1).value = '=HYPERLINK("{}", "{}")'.format(lista_adresow[nr], ">Link<")
+    wyniki_raportu.cell(row=len(wyniki_raportu["A"]), column=2).value = lista_tytulow[nr]
     plik_raportu.save("Raport_" + aktualna_data + ".xlsx")
 
 
 def tworzenie_raportu():
     try:
         load_workbook("Raport_" + aktualna_data + ".xlsx")
-        raport_kolumna += 1
     except:
         plik_raportu = Workbook()
         plik_raportu.save("Raport_" + aktualna_data + ".xlsx")
-        raport_kolumna = 1
 
 
 def sprawdzenie_historii():
@@ -117,28 +113,53 @@ def sprawdzenie_historii():
             zapis_raportu(nr)
 
 
-def start_programu(tryb):
-    if tryb == "selenium":
+def start_programu():
+    if aktualna_metoda_www == "selenium":
         odczyt_selenium()
         sprawdzenie_historii()
-    if tryb == "soap":
-        odczyt_soap()
+    if aktualna_metoda_www == "soup":
+        odczyt_soup()
         sprawdzenie_historii()
 
+
+def odczytaj_z_excela(excel, kol, rza):
+    return excel.cell(row=kol, column=rza).value
+
+
+def odczyt_danych_kolumna(plik_excel, kolumna):
+    dane = []
+    otwarty_excel = load_workbook(plik_excel).active
+    for i in range(1, len(otwarty_excel["A"])):
+        dane.append(odczytaj_z_excela(otwarty_excel, i, kolumna))
+    return dane
+
+
+def sprawdz_dane_excela():
+    if not len(strony_www) == len(css_strony) == len(css_tytuly) == len(css_adresy) == len(podst_adresy) == len(metody_www):
+        breakpoint()
+
+
+####################
+####################
+
+strony_www = odczyt_danych_kolumna("Baza_stron.xlsx", 4)
+css_strony = odczyt_danych_kolumna("Baza_stron.xlsx", 5)
+css_tytuly = odczyt_danych_kolumna("Baza_stron.xlsx", 8)
+css_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 7)
+podst_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 9)
+metody_www = odczyt_danych_kolumna("Baza_stron.xlsx", 6)
+sprawdz_dane_excela()
 
 aktualna_data = time.strftime("%Y_%m_%d")
 lista_tytulow = []
 lista_adresow = []
-www_strona = "https://bip.sobotka.pl/zamowienia/lista/13.dhtml"
-css_strona = "#lista_zamowien > tbody > tr"
-css_tytul = "td:nth-child(1) > a"
-# css_tytul = ""
-css_adres = "td:nth-child(1) > a"
-# css_adres = ""
-# base_url = "www.dupa.com"
-base_url = ""
 
 
-start_programu("selenium")
-
-# print(len(lista_adresow))
+for i in range(1, 2):
+    aktualna_strona_www = strony_www[i]
+    aktualna_css_strona = css_strony[i]
+    aktualna_css_tytul = css_tytuly[i]
+    aktualna_css_adres = css_adresy[i]
+    aktualna_podst_adres = podst_adresy[i]
+    aktualna_metoda_www = metody_www[i]
+    start_programu()
