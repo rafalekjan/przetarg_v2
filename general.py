@@ -6,10 +6,10 @@ from openpyxl import Workbook, load_workbook
 
 
 def otworz_strone_selenium():
-    strona = webdriver.Chrome('C:\Python27\Scripts\chromedriver.exe')
-    strona.implicitly_wait(10)
-    strona.get(aktualna_strona_www)
-    return strona
+    dane = webdriver.Chrome('C:\Python27\Scripts\chromedriver.exe')
+    dane.implicitly_wait(10)
+    dane.get(aktualna_strona_www)
+    return dane
 
 
 def otworz_strone_soup():
@@ -36,8 +36,14 @@ def tytul_selenium(strona, numer_obiektu):
 def tytul_soup(strona, numer_obiektu):
     css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
     if len(aktualna_css_tytul) > 0:
-        return strona.select(css_nth)[0].select(aktualna_css_tytul)[0].text.lower()
-    return strona.select(css_nth)[0].text.lower()
+        try:
+            return strona.select(css_nth)[0].select(aktualna_css_tytul)[0].text.lower()
+        except:
+            return ""
+    try:
+        return strona.select(css_nth)[0].text.lower()
+    except:
+        return ""
 
 
 def adres_selenium(strona, numer_obiektu):
@@ -51,26 +57,37 @@ def adres_selenium(strona, numer_obiektu):
 def adres_soup(strona, numer_obiektu):
     css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
     if len(aktualna_css_adres) > 0:
-        return aktualna_podst_adres + strona.select(css_nth)[0].select(aktualna_css_adres, href=True)[0]['href']
+        try:
+            return aktualna_podst_adres + strona.select(css_nth)[0].select(aktualna_css_adres, href=True)[0]['href']
+        except:
+            return ""
     else:
-        return aktualna_podst_adres
+        try:
+            return aktualna_podst_adres
+        except:
+            return ""
 
 
 def odczyt_selenium():
     dane_strony = otworz_strone_selenium()
     ilosc_obiektow = ilosc_obiektow_selenium(dane_strony)
+    print("Pod adresem:", aktualna_strona_www, "znaleziono ogłoszeń:", ilosc_obiektow)
     for nr in range(ilosc_obiektow):
         lista_tytulow.append(tytul_selenium(dane_strony, nr))
         lista_adresow.append(adres_selenium(dane_strony, nr))
+    print("Tytułów:", len(lista_tytulow))
+    print("Adresów:", len(lista_adresow))
 
 
 def odczyt_soup():
     dane_strony = otworz_strone_soup()
     ilosc_obiektow = ilosc_obiektow_soup(dane_strony)
-    print("Znaleziono ogloszen:", ilosc_obiektow)
+    print("Pod adresem:", aktualna_strona_www, "znaleziono ogłoszeń:", ilosc_obiektow)
     for nr in range(ilosc_obiektow):
         lista_tytulow.append(tytul_soup(dane_strony, nr))
         lista_adresow.append(adres_soup(dane_strony, nr))
+    if not len(lista_tytulow) == len(lista_adresow):
+        breakpoint()
 
 
 def odczyt_historii():
@@ -147,6 +164,11 @@ def sprawdz_dane_excela():
         breakpoint()
 
 
+def sprawdz_ilosc_wpisow_excela():
+    plik_raportu = load_workbook("Raport_" + aktualna_data + ".xlsx")
+    wyniki_raportu = plik_raportu.active
+    print("Odnaleziono nowych:", len(wyniki_raportu["A"]))
+
 ####################
 ####################
 
@@ -156,16 +178,15 @@ css_tytuly = odczyt_danych_kolumna("Baza_stron.xlsx", 8)
 css_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 7)
 podst_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 9)
 metody_www = odczyt_danych_kolumna("Baza_stron.xlsx", 6)
-gotowosc_raportowania = odczyt_danych_kolumna("Baza_stron.xlsx", 12)
+gotowosc_raportowania = odczyt_danych_kolumna("Baza_stron.xlsx", 10)
 sprawdz_dane_excela()
 
 aktualna_data = time.strftime("%Y_%m_%d")
 lista_tytulow = []
 lista_adresow = []
 
-print(time.strftime("%T"))
-for i in range(1, 27):
-    print("Strona nr:", i)
+print("Start:", time.strftime("%T"))
+for i in range(40, 51):
     aktualna_gotowosc_raportowania = gotowosc_raportowania[i]
     if aktualna_gotowosc_raportowania == "TAK":
         aktualna_strona_www = strony_www[i]
@@ -182,4 +203,5 @@ for i in range(1, 27):
         # print(aktualna_metoda_www)
         # print(aktualna_gotowosc_raportowania)
         start_programu()
-print(time.strftime("%T"))
+sprawdz_ilosc_wpisow_excela()
+print("Koniec:", time.strftime("%T"))
