@@ -6,10 +6,10 @@ from openpyxl import Workbook, load_workbook
 
 
 def otworz_strone_selenium():
-    dane = webdriver.Chrome('C:\Python27\Scripts\chromedriver.exe')
-    dane.implicitly_wait(10)
-    dane.get(aktualna_strona_www)
-    return dane
+    strona = webdriver.Chrome('C:\Python27\Scripts\chromedriver.exe')
+    strona.implicitly_wait(10)
+    strona.get(aktualna_strona_www)
+    return strona
 
 
 def otworz_strone_soup():
@@ -36,20 +36,17 @@ def tytul_selenium(strona, numer_obiektu):
 def tytul_soup(strona, numer_obiektu):
     css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
     if len(aktualna_css_tytul) > 0:
-        try:
-            return strona.select(css_nth)[0].select(aktualna_css_tytul)[0].text.lower()
-        except:
-            return ""
-    try:
-        return strona.select(css_nth)[0].text.lower()
-    except:
-        return ""
+        return strona.select(css_nth)[0].select(aktualna_css_tytul)[0].text.lower()
+    return strona.select(css_nth)[0].text.lower()
 
 
 def adres_selenium(strona, numer_obiektu):
     css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
     if len(aktualna_css_adres) > 0:
-        return aktualna_podst_adres + strona.find_element_by_css_selector(css_nth + ' > ' + css_adresy).get_attribute('href')
+        if aktualna_podst_adres is not None:
+            return aktualna_podst_adres + strona.find_element_by_css_selector(css_nth + ' > ' + css_adresy).get_attribute('href')
+        else:
+            return strona.find_element_by_css_selector(css_nth + ' > ' + css_adresy).get_attribute('href')
     else:
         return aktualna_podst_adres + strona.find_element_by_css_selector(css_nth).get_attribute('href')
 
@@ -57,66 +54,72 @@ def adres_selenium(strona, numer_obiektu):
 def adres_soup(strona, numer_obiektu):
     css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
     if len(aktualna_css_adres) > 0:
-        try:
+        if aktualna_podst_adres is not None:
             return aktualna_podst_adres + strona.select(css_nth)[0].select(aktualna_css_adres, href=True)[0]['href']
-        except:
-            return ""
+        else:
+            return strona.select(css_nth)[0].select(aktualna_css_adres, href=True)[0]['href']
     else:
-        try:
-            return aktualna_podst_adres
-        except:
-            return ""
+        return aktualna_podst_adres
+
+
+def adres_trovit(strona, numer_obiektu):
+    css_nth = aktualna_css_strona + ":nth-of-type(" + str(numer_obiektu + 1) + ")"
+    id_ogloszenia = strona.select(css_nth)[0].select(aktualna_css_adres, href=True)[0]['data-id']
+    strona_trovit = "http://rd.clk.thribee.com/id." + id_ogloszenia + "/origin.2/section.1/section_type.1/country.pl/vertical.homes/"
+    return strona_trovit
 
 
 def odczyt_selenium():
     dane_strony = otworz_strone_selenium()
     ilosc_obiektow = ilosc_obiektow_selenium(dane_strony)
-    print("Pod adresem:", aktualna_strona_www, "znaleziono ogłoszeń:", ilosc_obiektow)
     for nr in range(ilosc_obiektow):
         lista_tytulow.append(tytul_selenium(dane_strony, nr))
         lista_adresow.append(adres_selenium(dane_strony, nr))
-    print("Tytułów:", len(lista_tytulow))
-    print("Adresów:", len(lista_adresow))
 
 
 def odczyt_soup():
     dane_strony = otworz_strone_soup()
     ilosc_obiektow = ilosc_obiektow_soup(dane_strony)
-    print("Pod adresem:", aktualna_strona_www, "znaleziono ogłoszeń:", ilosc_obiektow)
     for nr in range(ilosc_obiektow):
-        lista_tytulow.append(tytul_soup(dane_strony, nr))
-        lista_adresow.append(adres_soup(dane_strony, nr))
-    if not len(lista_tytulow) == len(lista_adresow):
-        breakpoint()
+        try:
+            lista_tytulow.append(tytul_soup(dane_strony, nr))
+        except:
+            # print("Blad tytulu na nr. ", nr)
+            lista_tytulow.append("Blad tytulu")
+        try:
+            if aktualna_metoda_www == "trovit":
+                lista_adresow.append(adres_trovit(dane_strony, nr))
+            else:
+                lista_adresow.append(adres_soup(dane_strony, nr))
+        except:
+            # print("Blad adresu na nr. ", nr)
+            lista_adresow.append("Blad adresu")
 
 
 def odczyt_historii():
-    historia_tytulow = open("historia.txt", "r+")
-    return historia_tytulow.read()
+    historia_adresow = odczyt_danych_kolumna("historia.xlsx", 0, 10)
+    return historia_adresow
 
 
-def zapis_historii(nr):
-    historia_tytulow = open("historia.txt", "a+")
-    historia_tytulow.write((lista_tytulow[nr]) + '\n')
-    historia_tytulow.close()
-
-
-def zapis_raportu_txt(nr):
-    historia_tytulow = open("raport_" + aktualna_data + ".txt", "a+")
-    historia_tytulow.write(lista_tytulow[nr] + '\n')
-    historia_tytulow.close()
-
-
-def zapis_raportu(nr):
-    plik_raportu = load_workbook("Raport_" + aktualna_data + ".xlsx")
-    wyniki_raportu = plik_raportu.active
+def zapis_exela(nr, nazwa):
+    plik = load_workbook(nazwa + ".xlsx")
+    wyniki = plik.active
     if len(lista_adresow[nr]) > 255:
-        wyniki_raportu.cell(row=len(wyniki_raportu["A"]) + 1, column=1).value = lista_adresow[nr]
+        wyniki.cell(row=len(wyniki["A"]) + 1, column=1).value = '=HYPERLINK("{}", "{}")'.format(aktualna_strona_www, ">Link<")
     else:
-        wyniki_raportu.cell(row=len(wyniki_raportu["A"]) + 1, column=1).value = '=HYPERLINK("{}", "{}")'.format(
-            lista_adresow[nr], ">Link<")
-    wyniki_raportu.cell(row=len(wyniki_raportu["A"]), column=2).value = lista_tytulow[nr]
-    plik_raportu.save("Raport_" + aktualna_data + ".xlsx")
+        wyniki.cell(row=len(wyniki["A"]) + 1, column=1).value = '=HYPERLINK("{}", "{}")'.format(lista_adresow[nr], ">Link<")
+    wyniki.cell(row=len(wyniki["A"]), column=2).value = lista_tytulow[nr]
+    wyniki.cell(row=len(wyniki["A"]), column=10).value = lista_adresow[nr]
+    plik.save(nazwa + ".xlsx")
+
+
+def koniec_zapisu_exela(nazwa):
+    plik = load_workbook(nazwa + ".xlsx")
+    wyniki = plik.active
+    wyniki.cell(row=len(wyniki["A"]) + 1, column=1).value = 'xxx'
+    wyniki.cell(row=len(wyniki["A"]), column=2).value = 'xxx'
+    wyniki.cell(row=len(wyniki["A"]), column=10).value = 'xxx'
+    plik.save(nazwa + ".xlsx")
 
 
 def tworzenie_raportu():
@@ -127,19 +130,27 @@ def tworzenie_raportu():
         plik_raportu.save("Raport_" + aktualna_data + ".xlsx")
 
 
+def tworzenie_historii():
+    try:
+        load_workbook("historia.xlsx")
+    except:
+        plik_historii = Workbook()
+        plik_historii.save("historia.xlsx")
+
+
 def sprawdzenie_historii():
-    for nr, tytul in enumerate(lista_tytulow):
-        if tytul not in odczyt_historii():
+    for nr, adres in enumerate(lista_adresow):
+        if adres not in aktualna_historia:
+            zapis_exela(nr, "historia")
             tworzenie_raportu()
-            zapis_historii(nr)
-            zapis_raportu(nr)
+            zapis_exela(nr, "Raport_" + aktualna_data)
 
 
 def start_programu():
     if aktualna_metoda_www == "selenium":
         odczyt_selenium()
         sprawdzenie_historii()
-    if aktualna_metoda_www == "soup":
+    if aktualna_metoda_www == "soup" or aktualna_metoda_www == "trovit":
         odczyt_soup()
         sprawdzenie_historii()
 
@@ -148,14 +159,15 @@ def odczytaj_z_excela(excel, kol, rza):
     return excel.cell(row=kol, column=rza).value
 
 
-def odczyt_danych_kolumna(plik_excel, kolumna):
+def odczyt_danych_kolumna(plik_excel, strona, kolumna):
     dane = []
-    otwarty_excel = load_workbook(plik_excel).active
-    for i in range(1, len(otwarty_excel["A"])):
-        if odczytaj_z_excela(otwarty_excel, i, kolumna) is not None:
-            dane.append(odczytaj_z_excela(otwarty_excel, i, kolumna))
-        else:
-            dane.append("")
+    otwarty_excel = load_workbook(plik_excel)
+    otwarty_excel_lista = load_workbook(plik_excel).sheetnames
+    #
+    otwarty_excel_tekst = otwarty_excel[otwarty_excel_lista[strona]]
+    #
+    for i in range(1, len(otwarty_excel_tekst["A"]) + 1):
+        dane.append(odczytaj_z_excela(otwarty_excel_tekst, i, kolumna))
     return dane
 
 
@@ -164,44 +176,37 @@ def sprawdz_dane_excela():
         breakpoint()
 
 
-def sprawdz_ilosc_wpisow_excela():
-    plik_raportu = load_workbook("Raport_" + aktualna_data + ".xlsx")
-    wyniki_raportu = plik_raportu.active
-    print("Odnaleziono nowych:", len(wyniki_raportu["A"]))
-
 ####################
 ####################
 
-strony_www = odczyt_danych_kolumna("Baza_stron.xlsx", 4)
-css_strony = odczyt_danych_kolumna("Baza_stron.xlsx", 5)
-css_tytuly = odczyt_danych_kolumna("Baza_stron.xlsx", 8)
-css_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 7)
-podst_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 9)
-metody_www = odczyt_danych_kolumna("Baza_stron.xlsx", 6)
-gotowosc_raportowania = odczyt_danych_kolumna("Baza_stron.xlsx", 10)
+strony_www = odczyt_danych_kolumna("Baza_stron.xlsx", 1, 4)
+css_strony = odczyt_danych_kolumna("Baza_stron.xlsx", 1, 5)
+css_tytuly = odczyt_danych_kolumna("Baza_stron.xlsx", 1, 8)
+css_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 1, 7)
+podst_adresy = odczyt_danych_kolumna("Baza_stron.xlsx", 1, 9)
+metody_www = odczyt_danych_kolumna("Baza_stron.xlsx", 1, 6)
 sprawdz_dane_excela()
+tworzenie_historii()
 
 aktualna_data = time.strftime("%Y_%m_%d")
 lista_tytulow = []
 lista_adresow = []
 
-print("Start:", time.strftime("%T"))
-for i in range(40, 51):
-    aktualna_gotowosc_raportowania = gotowosc_raportowania[i]
-    if aktualna_gotowosc_raportowania == "TAK":
-        aktualna_strona_www = strony_www[i]
-        aktualna_css_strona = css_strony[i]
-        aktualna_css_tytul = css_tytuly[i]
-        aktualna_css_adres = css_adresy[i]
-        aktualna_podst_adres = podst_adresy[i]
-        aktualna_metoda_www = metody_www[i]
-        # print(aktualna_strona_www)
-        # print(aktualna_css_strona)
-        # print(aktualna_css_tytul)
-        # print(aktualna_css_adres)
-        # print(aktualna_podst_adres)
-        # print(aktualna_metoda_www)
-        # print(aktualna_gotowosc_raportowania)
-        start_programu()
-sprawdz_ilosc_wpisow_excela()
-print("Koniec:", time.strftime("%T"))
+aktualnych_historycznych = len(odczyt_historii())
+
+for i in range(1, 34):
+    aktualna_historia = odczyt_historii()
+    aktualna_strona_www = strony_www[i]
+    aktualna_css_strona = css_strony[i]
+    aktualna_css_tytul = css_tytuly[i]
+    aktualna_css_adres = css_adresy[i]
+    aktualna_podst_adres = podst_adresy[i]
+    aktualna_metoda_www = metody_www[i]
+    start_programu()
+
+koniec_zapisu_exela("Raport_" + aktualna_data)
+aktualna_historia = odczyt_historii()
+print("Nowych wpisów w historii :", len(aktualna_historia) - aktualnych_historycznych)
+
+
+
